@@ -32,6 +32,14 @@ jobs:
           open "$f"
           sleep 8; screencapture -x shots/fit.png
           sleep 3; screencapture -x shots/fit-later.png
+          # The same with one of Limoni's output tricks off at a time.
+          for v in LIMONI_SCROLL=0 LIMONI_PROBE=0; do
+            killall Terminal || true; sleep 2
+            sed "s|LEMONSWEEP_WINDOW=1|LEMONSWEEP_WINDOW=1 $v|" "$f" > "/tmp/$v.terminal"
+            open "/tmp/$v.terminal"
+            sleep 8; screencapture -x "shots/$v.png"
+            sleep 4; screencapture -x "shots/$v-later.png"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
