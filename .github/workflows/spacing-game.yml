@@ -9,7 +9,7 @@ on:
       spacings:
         default: "1.0 0.8 0.75 0.7"
       font:
-        default: SFMono-Regular
+        default: system
       size:
         default: "11"
 jobs:
@@ -26,7 +26,8 @@ jobs:
         run: |
           osascript -l JavaScript -e '
             ObjC.import("AppKit");
-            var f = $.NSFont.fontWithNameSize("${{ inputs.font }}", ${{ inputs.size }});
+            var f = "${{ inputs.font }}" == "system" ? $.NSFont.monospacedSystemFontOfSizeWeight(${{ inputs.size }}, 0) : $.NSFont.fontWithNameSize("${{ inputs.font }}", ${{ inputs.size }});
+            console.log(f.fontName.js);
             if (!f || f.isNil()) { throw "no font" }
             var d = $.NSKeyedArchiver.archivedDataWithRootObjectRequiringSecureCodingError(f, false, null);
             d.base64EncodedStringWithOptions(0).js' > font.b64
