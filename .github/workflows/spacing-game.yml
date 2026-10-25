@@ -1,0 +1,64 @@
+name: spacing-game
+# Lemon Sweep in half blocks in Terminal.app with SF Mono at several line
+# spacings: the block glyphs first, then the game.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        default: 659e219
+      spacings:
+        default: "1.0 0.8 0.75 0.7"
+      font:
+        default: SFMono-Regular
+      size:
+        default: "11"
+jobs:
+  game:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: false
+      - run: go install github.com/thebanri/limoni/apps/lemonsweep@${{ inputs.ref }}
+      - name: Archive the font
+        run: |
+          osascript -l JavaScript -e '
+            ObjC.import("AppKit");
+            var f = $.NSFont.fontWithNameSize("${{ inputs.font }}", ${{ inputs.size }});
+            if (!f || f.isNil()) { throw "no font" }
+            var d = $.NSKeyedArchiver.archivedDataWithRootObjectRequiringSecureCodingError(f, false, null);
+            d.base64EncodedStringWithOptions(0).js' > font.b64
+          wc -c font.b64
+      - name: A window per spacing
+        run: |
+          mkdir -p shots
+          bin="$(go env GOPATH)/bin/lemonsweep"
+          for s in ${{ inputs.spacings }}; do
+            cat > "sp$s.terminal" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>name</key><string>sp$s</string>
+            <key>type</key><string>Window Settings</string>
+            <key>Font</key><data>$(cat font.b64)</data>
+            <key>FontHeightSpacing</key><real>$s</real>
+            <key>columnCount</key><integer>120</integer>
+            <key>rowCount</key><integer>36</integer>
+            <key>CommandString</key><string>HOLD=4 python3 $PWD/scripts/blocks.py; ROWS=36 COLS=120 OUT=/dev/null python3 $PWD/scripts/relay.py $bin -flat=false</string>
+            <key>RunCommandAsShell</key><false/>
+          </dict></plist>
+          PLIST
+            open "sp$s.terminal"
+            sleep 3; screencapture -x "shots/sp$s-blocks.png"
+            sleep 14; screencapture -x "shots/sp$s-game.png"
+            sleep 4; screencapture -x "shots/sp$s-walk.png"
+            killall Terminal || true
+            sleep 2
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: shots
