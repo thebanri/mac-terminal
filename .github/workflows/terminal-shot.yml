@@ -1,0 +1,47 @@
+name: terminal-shot
+# Opens Lemon Sweep in Terminal.app and takes screenshots while a script
+# plays it: the title, standing still, walking, turning.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: lemonsweep version (commit, tag or latest)
+        default: ab22e2e
+      runner:
+        description: macOS image
+        default: macos-26
+      args:
+        description: lemonsweep flags
+        default: ""
+jobs:
+  shot:
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: false
+      - run: go install github.com/thebanri/limoni/apps/lemonsweep@${{ inputs.ref }}
+      - name: Terminal.app version
+        run: defaults read /System/Applications/Utilities/Terminal.app/Contents/Info CFBundleVersion || true
+      - name: Play in Terminal.app
+        run: |
+          mkdir -p shots
+          cat > run.command <<CMD
+          #!/bin/zsh
+          cd "$PWD"
+          OUT="$PWD/shots/out.bin" python3 scripts/relay.py "$(go env GOPATH)/bin/lemonsweep" ${{ inputs.args }}
+          CMD
+          chmod +x run.command
+          open -a Terminal run.command
+          for t in 3 6 8 12 14 18 20 26; do
+            sleep $(( t - ${prev:-0} )); prev=$t
+            screencapture -x shots/t$t.png
+          done
+          sleep 10
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: shots
