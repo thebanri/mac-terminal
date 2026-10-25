@@ -1,0 +1,37 @@
+name: glyphs
+# How Terminal.app draws half blocks, and which mouse events reach a program.
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        default: macos-26
+jobs:
+  glyphs:
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install cliclick || true
+      - name: Terminal.app version
+        run: defaults read /System/Applications/Utilities/Terminal.app/Contents/Info CFBundleVersion || true
+      - name: Draw and move the mouse
+        run: |
+          mkdir -p shots
+          printf '#!/bin/zsh\ncd "%s"\nOUT="%s/shots/mouse.bin" python3 scripts/glyphs.py\n' "$PWD" "$PWD" > run.command
+          chmod +x run.command
+          open -a Terminal run.command
+          sleep 6
+          screencapture -x shots/glyphs.png
+          osascript -e 'tell application "Terminal" to get bounds of front window' || true
+          # Move across the window without a button, then drag, then click.
+          for x in 200 260 320 380 440; do cliclick m:$x,300; sleep 0.3; done
+          cliclick dd:300,300 dm:350,300 dm:400,300 du:400,300 || true
+          cliclick c:300,300 || true
+          sleep 2
+          screencapture -x shots/after.png
+          sleep 20
+          xxd shots/mouse.bin | head -40 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: shots
