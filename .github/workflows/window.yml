@@ -24,6 +24,14 @@ jobs:
           sleep 10; screencapture -x shots/title.png
           cat ~/Library/Application\ Support/lemonsweep/Lemon\ Sweep.terminal | head -20 | cut -c1-200
           sleep 3; screencapture -x shots/later.png
+          # The same profile in a window that fits the screen: do the white
+          # cells come from Terminal shrinking a 160-column window?
+          killall Terminal || true; sleep 2
+          f=~/Library/Application\ Support/lemonsweep/Lemon\ Sweep.terminal
+          sed -i '' 's|<integer>160</integer>|<integer>130</integer>|; s|<integer>50</integer>|<integer>45</integer>|' "$f"
+          open "$f"
+          sleep 8; screencapture -x shots/fit.png
+          sleep 3; screencapture -x shots/fit-later.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
