@@ -16,16 +16,25 @@ jobs:
           cache: false
       - run: brew install cliclick || true
       - run: go install github.com/thebanri/limoni/apps/lemonsweep@${{ inputs.ref }}
+      - uses: actions/checkout@v4
       - name: Play
         run: |
           mkdir -p shots
+          key() { osascript -l JavaScript scripts/key.js "$@"; }
           "$(go env GOPATH)/bin/lemonsweep" -gui -mute > shots/log.txt 2>&1 &
-          sleep 8; screencapture -x shots/title.png
-          cliclick kp:return || echo "cliclick: $?"
-          sleep 3; screencapture -x shots/play.png
-          cliclick kd:w || true; sleep 2; screencapture -x shots/walk.png; cliclick ku:w || true
-          cliclick m:+200,+0 || true; sleep 1; screencapture -x shots/turn.png
-          cliclick kp:esc || true; sleep 1; screencapture -x shots/pause.png
+          sleep 8; screencapture -x shots/1-title.png
+          key 36 0.1                       # Enter: start
+          sleep 2; screencapture -x shots/2-play.png
+          key 13 1.5                       # W held
+          screencapture -x shots/3-walked.png
+          cliclick m:+150,+0 || true       # turn
+          sleep 0.5; screencapture -x shots/4-turned.png
+          cliclick c:. || true             # fire
+          sleep 0.15; screencapture -x shots/5-fired.png
+          key 0 0.8 & key 13 0.8           # A and W together
+          sleep 0.3; screencapture -x shots/6-two-keys.png
+          key 53 0.1                       # Esc: pause, the mouse let go
+          sleep 1; screencapture -x shots/7-paused.png
           sleep 1; cat shots/log.txt
       - uses: actions/upload-artifact@v4
         if: always()
