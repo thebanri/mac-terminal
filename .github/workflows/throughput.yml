@@ -1,0 +1,32 @@
+name: throughput
+# How many of Lemon Sweep's frames a second Terminal.app can take, at
+# 160x50 with the -window profile: true colour, 256 colours, flat.
+on: workflow_dispatch
+jobs:
+  throughput:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Play each stream in Terminal.app
+        run: |
+          gunzip -k streams/*.gz
+          for f in half-tc half-256 flat-tc half-tc; do
+            cat > "$f.terminal" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>name</key><string>$f</string>
+            <key>type</key><string>Window Settings</string>
+            <key>FontHeightSpacing</key><real>0.75</real>
+            <key>columnCount</key><integer>160</integer>
+            <key>rowCount</key><integer>50</integer>
+            <key>CommandString</key><string>python3 $PWD/scripts/throughput.py $PWD/streams/$f.bin $PWD/results.txt; touch $PWD/done</string>
+            <key>RunCommandAsShell</key><false/>
+          </dict></plist>
+          PLIST
+            rm -f done
+            open "$f.terminal"
+            for i in $(seq 120); do [ -f done ] && break; sleep 1; done
+            killall Terminal || true; sleep 2
+          done
+          cat results.txt
