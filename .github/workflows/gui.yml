@@ -1,0 +1,34 @@
+name: gui
+# lemonsweep -gui on macOS: the window, then keys and the mouse if the
+# runner lets cliclick send them.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        default: main
+jobs:
+  gui:
+    runs-on: macos-26
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: false
+      - run: brew install cliclick || true
+      - run: go install github.com/thebanri/limoni/apps/lemonsweep@${{ inputs.ref }}
+      - name: Play
+        run: |
+          mkdir -p shots
+          "$(go env GOPATH)/bin/lemonsweep" -gui -mute > shots/log.txt 2>&1 &
+          sleep 8; screencapture -x shots/title.png
+          cliclick kp:return || echo "cliclick: $?"
+          sleep 3; screencapture -x shots/play.png
+          cliclick kd:w || true; sleep 2; screencapture -x shots/walk.png; cliclick ku:w || true
+          cliclick m:+200,+0 || true; sleep 1; screencapture -x shots/turn.png
+          cliclick kp:esc || true; sleep 1; screencapture -x shots/pause.png
+          sleep 1; cat shots/log.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots
+          path: shots
